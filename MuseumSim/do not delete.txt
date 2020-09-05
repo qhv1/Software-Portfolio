@@ -1,0 +1,141 @@
+(void) mode;
+	(void) dev;
+	(void) path;
+
+	struct cs1550_root_directory *root = malloc(sizeof(struct cs1550_root_directory));
+	fp = fopen(".disk", "rb+");
+
+	fseek(fp, 0, SEEK_SET);
+	fread(root, BLOCK_SIZE, 1, fp);
+
+	char *directory = NULL;
+	char *filename = NULL;
+	char *extension = NULL;
+
+	directory = strtok(path, "/");
+	printf("Directory: %s\n", directory);
+
+	filename = strtok(NULL, "/");
+	//printf("Filename: %s\n", filename);
+
+	filename = strtok(filename, ".");
+	printf("Filename: %s\n", filename);
+	extension = strtok(NULL, ".");
+	printf("Extension: %s\n", extension);
+
+	if(strcmp(path, "/") == 0)
+	{
+		fclose(fp);
+		free(root);
+		return -EPERM;
+	}
+	if(strlen(filename) > MAX_FILENAME)
+	{
+
+		fclose(fp);
+		free(root);
+		return -ENAMETOOLONG;
+	}
+
+	struct cs1550_directory_entry *readSub = malloc(sizeof(struct cs1550_directory_entry));
+	int i;
+	for(i = 0; i < root->nDirectories; i++)
+	{
+		struct cs1550_directory testDir = root->directories[i];
+		if(strcmp(testDir.dname, directory) == 0)
+		{
+			fseek(fp, testDir.nStartBlock * BLOCK_SIZE, SEEK_SET);
+			fread(readSub, BLOCK_SIZE, 1, fp);
+			break;
+		}
+	}
+
+	for(i = 0; i < readSub->nFiles; i++)
+	{
+		struct cs1550_file_directory testFile = readSub->files[i];
+		if((strcmp(testFile.fname, filename) == 0) && (strcmp(testFile.fext, extension) == 0))
+		{
+			free(root);
+			free(readSub);
+			fclose(fp);
+			return -EEXIST;
+		}
+	}
+	free(readSub);
+
+	fseek(fp, -3 * BLOCK_SIZE, SEEK_END);
+	int check = 0;
+
+	//bitPos will keep track of the block location of the directory
+	long bitPos = 0;
+	//loop through bitmap to find hex value
+	while(check == 0)
+	{
+		unsigned char byte;
+		fread(&byte, 1, 1, fp);
+		//if it is already full, we don't need to check it
+		if(byte == 0xFF)
+		{
+			bitPos+= 8;
+			continue;
+		}
+		unsigned char result;
+		int j;
+		//loop through byte to see if there is a bit which is open
+		for(j = 8; j > 0; j--)
+		{
+			result = (byte & (1<<(j-1)));
+			if(result == 0)
+			{
+				byte = (byte | (1<<(j-1)));
+				check = 1;
+				break;
+			}
+			bitPos++;
+		}
+		if(check == 1)
+		{
+			fseek(fp, -1, SEEK_CUR);
+			fwrite(&byte, 1, 1, fp);
+		}
+	}
+
+
+	int subDirPos = -1;
+	struct cs1550_directory_entry *updatedSubDir = malloc(sizeof(struct cs1550_directory_entry));
+	for(i = 0; i < root->nDirectories; i++)
+	{
+		struct cs1550_directory index = root->directories[i];
+		if(strcmp(index.dname, directory) == 0)
+		{
+			subDirPos = index.nStartBlock;
+			fseek(fp, index.nStartBlock * BLOCK_SIZE, SEEK_SET);
+			fread(updatedSubDir, BLOCK_SIZE, 1, fp);
+
+			break;
+		}
+	}
+	printf("Sub Dir Pos: %d\n", subDirPos);
+
+	strcpy(updatedSubDir->files[updatedSubDir->nFiles].fname, directory);
+	strcpy(updatedSubDir->files[updatedSubDir->nFiles].fext, extension);
+	printf("BIT POST: %d\n", bitPos);
+	updatedSubDir->files[updatedSubDir->nFiles].nIndexBlock = bitPos;
+
+	updatedSubDir->nFiles++;
+
+	fseek(fp, (subDirPos * BLOCK_SIZE + 512), SEEK_SET);
+	fwrite(updatedSubDir, BLOCK_SIZE, 1, fp);
+
+	struct cs1550_index_block *newFile = malloc(sizeof(cs1550_index_block));
+
+	fseek(fp, (bitPos * BLOCK_SIZE), SEEK_SET);
+	fwrite(newFile, BLOCK_SIZE, 1, fp);
+
+
+	free(newFile);
+	free(updatedSubDir);
+	free(root);
+	fclose(fp);
+
+	return 0;
