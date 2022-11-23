@@ -1,0 +1,5 @@
+vpc = "vpc"
+public_subnet = "public_subnet"
+private_subnet = "private_subnet"
+key_pair_name = "key_pair_name"
+bastion_instance_public_ip = "bastion_instance_public_ip"

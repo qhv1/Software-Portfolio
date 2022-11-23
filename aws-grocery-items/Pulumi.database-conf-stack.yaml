@@ -1,0 +1,7 @@
+encryptionsalt: v1:1T7qMoqvLss=:v1:TrjMW5CUXtlJi8Xb:pOFrK1kexeW2PMy9dutVgVqoMRV/HQ==
+config:
+  aws-grocery-items:database_instance:
+    instance_size: 20
+    instance_type: t2.micro
+  aws-grocery-items:type: database
+  aws:region: us-east-1

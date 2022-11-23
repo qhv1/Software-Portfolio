@@ -1,0 +1,10 @@
+encryptionsalt: v1:w7J5z2uDGoc=:v1:1sciuA4FBJUbGaPU:Lk//BJvJGIuriBHj8kBSwKnPp5UZyw==
+config:
+  aws-grocery-items:bastion_instance:
+    instance_size: 20
+    instance_type: t2.micro
+  aws-grocery-items:cidr_block: 10.1.0.0/26
+  aws-grocery-items:private_cidr_block: 10.1.0.0/27
+  aws-grocery-items:public_cidr_block: 10.1.0.32/27
+  aws-grocery-items:type: network
+  aws:region: us-east-1
