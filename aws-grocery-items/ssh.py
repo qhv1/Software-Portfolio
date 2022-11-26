@@ -5,7 +5,7 @@ import pulumi
 from pulumi import Output
 from pulumi_command import local
 from pulumi_aws import ec2
-from sh import chmod, mv, rm, ssh_keygen
+from sh import chmod, mv, rm, ssh_keygen, mkdir
 
 import pulumi_export
 
@@ -31,6 +31,7 @@ def generate_key_pair(key_name: str):
     return key_pair
     
 def generate_ssh_key(key_name: str):
+    mkdir("-p", KEYS_DIR)
     ssh_keygen("-m", "PEM", "-f", f"{KEYS_DIR}/{key_name}", "-N", "")
     mv(f"{KEYS_DIR}/{key_name}", f"{KEYS_DIR}/{key_name}.pem")
     chmod("400", f"{KEYS_DIR}/{key_name}.pem")
